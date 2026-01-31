@@ -29,13 +29,13 @@ jobs:
         run: yarn install --frozen-lockfile
 
       - name: Run Prettier check
-        run: npx prettier --ignore-path=.gitignore --check .
+        run: yarn format:check
 
       - name: Run ESLint
-        run: npx eslint .
+        run: yarn lint
 
       - name: Type check & build
-        run: yarn build
+        run: yarn typecheck && yarn build
 
       - name: Docker build (no push)
         run: docker build -t osbr-app:ci .
