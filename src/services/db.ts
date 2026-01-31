@@ -5,7 +5,6 @@ declare global {
   var _mongoClientPromise: Promise<MongoClient> | undefined;
 }
 
-// eslint-disable-next-line import/prefer-default-export
 export default async function connectDatabase(): Promise<MongoClient> {
   if (!process.env.MONGODB_URI) {
     throw new Error('Invalid/Missing environment variable: "MONGODB_URI"');
