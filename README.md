@@ -271,3 +271,115 @@ This implementation focuses on:
 - Infrastructure awareness
 
 The system is designed to be **scalable, observable, and easy to evolve**.
+
+---
+
+## 🧠 Engineering Decisions & Trade-offs
+
+### 1️⃣ Design Decisions Made
+
+- **Cart-centric sessions (not auth sessions)**
+  Sessions are designed to represent _active carts_, not login state.
+  This supports both guest and authenticated users uniformly and avoids coupling cart behavior to authentication.
+
+- **Cache-aside strategy with Redis**
+  Redis is used for:
+  - Active cart session references
+  - Cart data caching
+    MongoDB remains the **source of truth**, ensuring durability and correctness.
+
+- **Pattern B: One Cart → Many Orders**
+  Checkout is designed to be **idempotent**:
+  - A cart can generate multiple orders (e.g. retries, partial payments)
+  - The latest valid order is reused if it already exists
+    This avoids duplicate orders while keeping the system resilient to retries and network failures.
+
+- **Generic, type-safe session service**
+  The session service is designed to be reusable beyond carts by supporting:
+  - Custom prefixes
+  - Custom TTLs
+  - Strong TypeScript inference
+    This improves maintainability and avoids Redis logic being scattered across the codebase.
+
+---
+
+### 2️⃣ Infrastructure Choices & Security Measures
+
+- **Stateless API on ECS (Fargate)**
+  Containers are stateless and horizontally scalable.
+  Session state lives in Redis, persistence in MongoDB.
+
+- **VPC + ALB**
+  - Private subnets for compute
+  - Public ALB as controlled ingress
+  - Clear separation between public-facing and internal services
+
+- **Security Measures (Design-level)**
+  - Secrets injected via environment variables (intended for AWS Secrets Manager in production)
+  - Redis protected via authentication
+  - No direct public access to MongoDB / Redis
+  - Principle of least privilege for IAM roles (demonstrated in Terraform structure)
+
+> Actual provisioning is not required, but the Terraform layout reflects real-world production architecture.
+
+---
+
+### 3️⃣ Continuous Deployment (CD) Flow
+
+The GitHub Actions pipeline currently performs:
+
+- Formatting (Prettier)
+- Linting (ESLint)
+- Type checking & build verification
+- Docker image build (no push)
+
+**In a real production setup**, CD would extend this by:
+
+1. Building and tagging a Docker image
+2. Pushing the image to a container registry (e.g. ECR)
+3. Triggering an ECS service update
+4. Performing rolling deployments behind ALB
+5. Optionally running health checks / smoke tests
+
+Deployment is intentionally excluded from CI to keep the repository environment-agnostic.
+
+---
+
+### 4️⃣ Challenges Faced & Trade-offs
+
+- **Session expiration vs user experience**
+  Redis TTL is used to detect _activity_, not to delete carts.
+  This avoids bad UX where users lose carts, at the cost of having abandoned carts in MongoDB.
+
+- **Redis as ephemeral storage**
+  Redis is treated as a performance layer only.
+  This increases reliability but requires explicit cache invalidation logic.
+
+- **No background cleanup job**
+  Abandoned carts are identified by session expiry instead of scheduled cleanup jobs.
+  This simplifies infrastructure but means historical carts accumulate over time (acceptable for this scope).
+
+- **Simplified authentication model**
+  Auth is out of scope to keep focus on cart business logic and system design clarity.
+
+---
+
+### 5️⃣ What I Would Improve With More Time
+
+- Add distributed locking for checkout idempotency (e.g. Redis lock)
+- Add observability (metrics + tracing)
+- Add rate limiting and request-level idempotency keys
+- Add background workers for abandoned cart analysis
+- Add API schema (OpenAPI / Swagger)
+
+---
+
+## 🎯 Why This Design
+
+The system is intentionally designed to:
+
+- Be **stateless and horizontally scalable**
+- Be **resilient to retries**
+- Favor **correctness over premature optimization**
+- Reflect **real production trade-offs**
+- Be easy to evolve into a full checkout platform
