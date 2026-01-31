@@ -1,0 +1,43 @@
+# See https://help.github.com/ignore-files/ for more about ignoring files.
+
+# # dependencies
+# /node_modules
+
+# # misc
+# .DS_Store
+# .env
+# .env.local
+# .env.development.local
+# .env.test.local
+# .env.production.local
+
+# package-lock.json
+# # yarn.lock
+
+# npm-debug.log*
+# yarn-debug.log*
+# yarn-error.log*
+# # *.sh
+# # *.out
+# # *.log
+# # yarn.lock
+# package-lock.json
+
+# # Next.js
+# /.next
+
+*
+
+!.github/
+!public/
+!scripts/
+!src/
+!.gitignore
+!.gitlab-ci.yml
+!docker-compose.yml
+!Dockerfile
+!env.d.ts
+!package.json
+!README.md
+!tsconfig.json
+!yarn.lock
